@@ -129,6 +129,7 @@ class Lddc final {
 #endif
 
   PublisherPtr GetCurrentPublisher(uint8_t index);
+  PublisherPtr GetCurrentPublisherCustom(uint8_t index);
   PublisherPtr GetCurrentImuPublisher(uint8_t index);
 
  private:
