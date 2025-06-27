@@ -44,6 +44,7 @@ typedef enum {
   kLivoxCustomMsg = 1,
   kPclPxyziMsg = 2,
   kLivoxImuMsg = 3,
+  kBothFormats = 4,
 } TransferType;
 
 /** Type-Definitions based on ROS versions */
@@ -145,13 +146,17 @@ class Lddc final {
   bool enable_lidar_bag_;
   bool enable_imu_bag_;
   PublisherPtr private_pub_[kMaxSourceLidar];
+  PublisherPtr private_pub_custom_[kMaxSourceLidar];
   PublisherPtr global_pub_;
+  PublisherPtr global_pub_custom_;
   PublisherPtr private_imu_pub_[kMaxSourceLidar];
   PublisherPtr global_imu_pub_;
   rosbag::Bag *bag_;
 #elif defined BUILDING_ROS2
   PublisherPtr private_pub_[kMaxSourceLidar];
+  PublisherPtr private_pub_custom_[kMaxSourceLidar];
   PublisherPtr global_pub_;
+  PublisherPtr global_pub_custom_;
   PublisherPtr private_imu_pub_[kMaxSourceLidar];
   PublisherPtr global_imu_pub_;
 #endif
