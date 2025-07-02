@@ -10,7 +10,7 @@ if(ROS_EDITION STREQUAL "ROS1")
   # Start livox_ros_driver2 project
   #---------------------------------------------------------------------------------------
   include(cmake/version.cmake)
-  project(livox_ros_driver2 VERSION ${LIVOX_ROS_DRIVER2_VERSION} LANGUAGES CXX)
+  project(livox_ros_driver2 VERSION ${LIVOX_ROS_DRIVER2_VERSION} LANGUAGES CXX C)
   message(STATUS "livox_ros_driver2 version: ${LIVOX_ROS_DRIVER2_VERSION}")
 
   #---------------------------------------------------------------------------------------
@@ -189,7 +189,6 @@ else(ROS_EDITION STREQUAL "ROS2")
   # Copyright(c) 2020 livoxtech limited.
 
   cmake_minimum_required(VERSION 3.14)
-  project(livox_ros_driver2)
 
   # Default to C99
   if(NOT CMAKE_C_STANDARD)
@@ -209,8 +208,8 @@ else(ROS_EDITION STREQUAL "ROS2")
 
   # Printf version info
   include(cmake/version.cmake)
-  project(${PROJECT_NAME} VERSION ${LIVOX_ROS_DRIVER2_VERSION} LANGUAGES CXX)
-  message(STATUS "${PROJECT_NAME} version: ${LIVOX_ROS_DRIVER2_VERSION}")
+  project(livox_ros_driver2 VERSION ${LIVOX_ROS_DRIVER2_VERSION} LANGUAGES CXX C)
+  message(STATUS "livox_ros_driver2 version: ${LIVOX_ROS_DRIVER2_VERSION}")
 
   #---------------------------------------------------------------------------------------
   # Add ROS Version MACRO
@@ -221,6 +220,15 @@ else(ROS_EDITION STREQUAL "ROS2")
   # uncomment the following section in order to fill in
   # further dependencies manually.
   # find_package(<dependency> REQUIRED)
+  find_package(MPI) # Added this line
+  # Note on PCL/VTK/MPI dependencies:
+  # The following find_package calls (especially for PCL via pcl_conversions)
+  # may require MPI if PCL and its dependency VTK were built with MPI support.
+  # If you encounter CMake errors related to "VTK::mpi" or missing "MPI::MPI_C"
+  # (often seen on aarch64 or custom builds), ensure that MPI development
+  # libraries (e.g., libopenmpi-dev on Debian/Ubuntu) are installed on your
+  # system and are discoverable by CMake. This find_package(MPI) call above
+  # attempts to locate MPI beforehand, but system configuration is key.
   find_package(ament_cmake_auto REQUIRED)
   ament_auto_find_build_dependencies()
   find_package(PCL REQUIRED)
@@ -242,9 +250,18 @@ else(ROS_EDITION STREQUAL "ROS2")
     "msg/CustomPoint.msg"
     "msg/CustomMsg.msg"
     DEPENDENCIES builtin_interfaces std_msgs
-    LIBRARY_NAME ${PROJECT_NAME}
   )
 
+# Livox SDK Dependency
+# --------------------
+# The following lines locate the Livox SDK. Please ensure that the version
+# of the Livox SDK you have installed is compatible with your target OS
+# (e.g., Ubuntu 24.04) and ROS2 distribution (e.g., Jazzy).
+# Refer to the official Livox documentation for SDK compatibility information
+# and installation instructions.
+# The driver currently expects the SDK shared library (liblivox_lidar_sdk_shared.so)
+# to be found in a standard system path like /usr/local/lib and headers to be
+# discoverable by the compiler.
   ## make sure the livox_lidar_sdk_shared library is installed
   find_library(LIVOX_LIDAR_SDK_LIBRARY liblivox_lidar_sdk_shared.so /usr/local/lib REQUIRED)
 
@@ -281,23 +298,17 @@ else(ROS_EDITION STREQUAL "ROS2")
 
   target_include_directories(${PROJECT_NAME} PRIVATE ${livox_sdk_INCLUDE_DIRS})
 
-  # get include directories of custom msg headers
-  if(HUMBLE_ROS STREQUAL "humble")
-    rosidl_get_typesupport_target(cpp_typesupport_target
-    ${LIVOX_INTERFACES} "rosidl_typesupport_cpp")
-    target_link_libraries(${PROJECT_NAME} "${cpp_typesupport_target}")
-  else()
-    set(LIVOX_INTERFACE_TARGET "${LIVOX_INTERFACES}__rosidl_typesupport_cpp")
-    add_dependencies(${PROJECT_NAME} ${LIVOX_INTERFACES})
-    get_target_property(LIVOX_INTERFACES_INCLUDE_DIRECTORIES ${LIVOX_INTERFACE_TARGET} INTERFACE_INCLUDE_DIRECTORIES)
-  endif()
+  # Set up the target for linking against message typesupport
+  set(LIVOX_INTERFACE_TARGET "${LIVOX_INTERFACES}__rosidl_typesupport_cpp")
+
+  # Ensure the main project target depends on the interface generation targets
+  add_dependencies(${PROJECT_NAME} ${LIVOX_INTERFACES})
 
   # include file direcotry
   target_include_directories(${PROJECT_NAME} PUBLIC
     ${PCL_INCLUDE_DIRS}
     ${APR_INCLUDE_DIRS}
     ${LIVOX_LIDAR_SDK_INCLUDE_DIR}
-    ${LIVOX_INTERFACES_INCLUDE_DIRECTORIES}   # for custom msgs
     3rdparty
     src
   )
