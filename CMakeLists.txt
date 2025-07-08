@@ -220,6 +220,10 @@ else(ROS_EDITION STREQUAL "ROS2")
   # uncomment the following section in order to fill in
   # further dependencies manually.
   # find_package(<dependency> REQUIRED)
+  
+  # Set CMake policy to suppress FLANN_ROOT warning
+  cmake_policy(SET CMP0144 NEW)
+  
   find_package(MPI) # Added this line
   # Note on PCL/VTK/MPI dependencies:
   # The following find_package calls (especially for PCL via pcl_conversions)
@@ -232,6 +236,7 @@ else(ROS_EDITION STREQUAL "ROS2")
   find_package(ament_cmake_auto REQUIRED)
   ament_auto_find_build_dependencies()
   find_package(PCL REQUIRED)
+  find_package(Boost 1.54 REQUIRED COMPONENTS system thread chrono)
   find_package(std_msgs REQUIRED)
   find_package(builtin_interfaces REQUIRED)
   find_package(rosidl_default_generators REQUIRED)
@@ -263,11 +268,14 @@ else(ROS_EDITION STREQUAL "ROS2")
 # to be found in a standard system path like /usr/local/lib and headers to be
 # discoverable by the compiler.
   ## make sure the livox_lidar_sdk_shared library is installed
-  find_library(LIVOX_LIDAR_SDK_LIBRARY liblivox_lidar_sdk_shared.so /usr/local/lib REQUIRED)
+  find_library(LIVOX_LIDAR_SDK_LIBRARY livox_lidar_sdk_shared 
+    PATHS /usr/local/lib /usr/lib /usr/lib/x86_64-linux-gnu /usr/lib/aarch64-linux-gnu
+    REQUIRED)
 
   ##
   find_path(LIVOX_LIDAR_SDK_INCLUDE_DIR
     NAMES "livox_lidar_api.h" "livox_lidar_def.h"
+    PATHS /usr/local/include /usr/include
     REQUIRED)
 
   ## PCL library
@@ -296,13 +304,14 @@ else(ROS_EDITION STREQUAL "ROS2")
     src/call_back/livox_lidar_callback.cpp
   )
 
-  target_include_directories(${PROJECT_NAME} PRIVATE ${livox_sdk_INCLUDE_DIRS})
-
-  # Set up the target for linking against message typesupport
-  set(LIVOX_INTERFACE_TARGET "${LIVOX_INTERFACES}__rosidl_typesupport_cpp")
+  target_include_directories(${PROJECT_NAME} PRIVATE ${LIVOX_LIDAR_SDK_INCLUDE_DIR})
 
   # Ensure the main project target depends on the interface generation targets
   add_dependencies(${PROJECT_NAME} ${LIVOX_INTERFACES})
+  
+  # Link against the generated interfaces
+  rosidl_get_typesupport_target(cpp_typesupport_target ${LIVOX_INTERFACES} "rosidl_typesupport_cpp")
+  target_link_libraries(${PROJECT_NAME} "${cpp_typesupport_target}")
 
   # include file direcotry
   target_include_directories(${PROJECT_NAME} PUBLIC
@@ -316,8 +325,6 @@ else(ROS_EDITION STREQUAL "ROS2")
   # link libraries
   target_link_libraries(${PROJECT_NAME}
     ${LIVOX_LIDAR_SDK_LIBRARY}
-    ${LIVOX_INTERFACE_TARGET}   # for custom msgs
-    ${PPT_LIBRARY}
     ${Boost_LIBRARY}
     ${PCL_LIBRARIES}
     ${APR_LIBRARIES}
