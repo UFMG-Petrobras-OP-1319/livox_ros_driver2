@@ -250,7 +250,7 @@ else(ROS_EDITION STREQUAL "ROS2")
   endif (APR_FOUND)
 
   # generate custom msg headers
-  set(LIVOX_INTERFACES livox_interfaces2)
+  set(LIVOX_INTERFACES ${PROJECT_NAME})
   rosidl_generate_interfaces(${LIVOX_INTERFACES}
     "msg/CustomPoint.msg"
     "msg/CustomMsg.msg"
@@ -283,7 +283,7 @@ else(ROS_EDITION STREQUAL "ROS2")
   add_definitions(${PCL_DEFINITIONS})
 
   # livox ros2 driver target
-  ament_auto_add_library(${PROJECT_NAME} SHARED
+  ament_auto_add_library(${PROJECT_NAME}_lib SHARED
     src/livox_ros_driver2.cpp
     src/lddc.cpp
     src/driver_node.cpp
@@ -304,17 +304,17 @@ else(ROS_EDITION STREQUAL "ROS2")
     src/call_back/livox_lidar_callback.cpp
   )
 
-  target_include_directories(${PROJECT_NAME} PRIVATE ${LIVOX_LIDAR_SDK_INCLUDE_DIR})
+  target_include_directories(${PROJECT_NAME}_lib PRIVATE ${LIVOX_LIDAR_SDK_INCLUDE_DIR})
 
   # Ensure the main project target depends on the interface generation targets
-  add_dependencies(${PROJECT_NAME} ${LIVOX_INTERFACES})
+  add_dependencies(${PROJECT_NAME}_lib ${LIVOX_INTERFACES})
   
-  # Link against the generated interfaces
+  # Link the custom interfaces to the target (using the new recommended approach)
   rosidl_get_typesupport_target(cpp_typesupport_target ${LIVOX_INTERFACES} "rosidl_typesupport_cpp")
-  target_link_libraries(${PROJECT_NAME} "${cpp_typesupport_target}")
+  target_link_libraries(${PROJECT_NAME}_lib "${cpp_typesupport_target}")
 
   # include file direcotry
-  target_include_directories(${PROJECT_NAME} PUBLIC
+  target_include_directories(${PROJECT_NAME}_lib PUBLIC
     ${PCL_INCLUDE_DIRS}
     ${APR_INCLUDE_DIRS}
     ${LIVOX_LIDAR_SDK_INCLUDE_DIR}
@@ -322,15 +322,27 @@ else(ROS_EDITION STREQUAL "ROS2")
     src
   )
 
+  # use ament_target_dependencies for ROS 2 dependencies
+  ament_target_dependencies(${PROJECT_NAME}_lib
+    rclcpp
+    rclcpp_components
+    std_msgs
+    sensor_msgs
+    rcutils
+    pcl_conversions
+    rcl_interfaces
+    builtin_interfaces
+  )
+
   # link libraries
-  target_link_libraries(${PROJECT_NAME}
+  target_link_libraries(${PROJECT_NAME}_lib
     ${LIVOX_LIDAR_SDK_LIBRARY}
     ${Boost_LIBRARY}
     ${PCL_LIBRARIES}
     ${APR_LIBRARIES}
   )
 
-  rclcpp_components_register_node(${PROJECT_NAME}
+  rclcpp_components_register_node(${PROJECT_NAME}_lib
     PLUGIN "livox_ros::DriverNode"
     EXECUTABLE ${PROJECT_NAME}_node
   )
