@@ -77,11 +77,6 @@ const double PI = 3.14159265358979323846;
 
 constexpr uint32_t kMaxBufferSize = 0x8000;  // 32k bytes
 
-/** Device Line Number **/
-const uint8_t kLineNumberDefault = 1;
-const uint8_t kLineNumberMid360 = 4;
-const uint8_t kLineNumberHAP = 6;    
-
 // SDK related
 typedef enum {
   kIndustryLidarType = 1,

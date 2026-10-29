@@ -75,6 +75,10 @@ void Lds::ResetLds(uint8_t data_src) {
 
 void Lds::RequestExit() {
   request_exit_ = true;
+  // Wake the ROS polling threads if no sensor has supplied data. Without
+  // these signals, DriverNode's destructor can block forever joining them.
+  pcd_semaphore_.Signal();
+  imu_semaphore_.Signal();
 }
 
 bool Lds::IsAllQueueEmpty() {

@@ -348,6 +348,13 @@ else(ROS_EDITION STREQUAL "ROS2")
   )
 
   if(BUILD_TESTING)
+    add_executable(test_lidar_line_number test/test_lidar_line_number.cpp)
+    target_include_directories(test_lidar_line_number PRIVATE
+      src
+      ${LIVOX_LIDAR_SDK_INCLUDE_DIR}
+    )
+    add_test(NAME lidar_line_number COMMAND test_lidar_line_number)
+
     find_package(ament_lint_auto REQUIRED)
     # the following line skips the linter which checks for copyrights
     # uncomment the line when a copyright and license is not present in all source files

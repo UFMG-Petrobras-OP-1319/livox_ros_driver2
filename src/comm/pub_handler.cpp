@@ -29,6 +29,8 @@
 #include <iostream>
 #include <limits>
 
+#include "comm/lidar_line_number.h"
+
 namespace livox_ros {
 
 std::atomic<bool> PubHandler::is_timestamp_sync_;
@@ -130,13 +132,7 @@ void PubHandler::OnLivoxLidarPointCloudCallback(uint32_t handle, const uint8_t d
   packet.handle = handle;
   packet.lidar_type = LidarProtoType::kLivoxLidarType;
   packet.extrinsic_enable = false; 
-  if (dev_type == LivoxLidarDeviceType::kLivoxLidarTypeIndustrialHAP) {
-    packet.line_num = kLineNumberHAP;
-  } else if (dev_type == LivoxLidarDeviceType::kLivoxLidarTypeMid360) {
-    packet.line_num = kLineNumberMid360;
-  } else {
-    packet.line_num = kLineNumberDefault;
-  }
+  packet.line_num = LidarLineNumberForDeviceType(dev_type);
   packet.data_type = data->data_type;
   packet.point_num = data->dot_num;
   packet.point_interval = data->time_interval * 100 / data->dot_num;  //ns
@@ -383,7 +379,7 @@ void LidarPubHandler::ProcessCartesianHighPoint(RawPacket & pkt) {
                 raw[i].z * extrinsic_.rotation[2][2] + extrinsic_.trans[2]) / 1000.0;
     }
     point.intensity = raw[i].reflectivity;
-    point.line = i % pkt.line_num;
+    point.line = LidarLineForPointIndex(pkt.line_num, i);
     point.tag = raw[i].tag;
     point.offset_time = pkt.time_stamp + i * pkt.point_interval;
     std::lock_guard<std::mutex> lock(mutex_);
@@ -411,7 +407,7 @@ void LidarPubHandler::ProcessCartesianLowPoint(RawPacket & pkt) {
                 raw[i].z * extrinsic_.rotation[2][2] + extrinsic_.trans[2]) / 100.0;
     }
     point.intensity = raw[i].reflectivity;
-    point.line = i % pkt.line_num;
+    point.line = LidarLineForPointIndex(pkt.line_num, i);
     point.tag = raw[i].tag;
     point.offset_time = pkt.time_stamp + i * pkt.point_interval;
     std::lock_guard<std::mutex> lock(mutex_);
@@ -446,7 +442,7 @@ void LidarPubHandler::ProcessSphericalPoint(RawPacket& pkt) {
     }
 
     point.intensity = raw[i].reflectivity;
-    point.line = i % pkt.line_num;
+    point.line = LidarLineForPointIndex(pkt.line_num, i);
     point.tag = raw[i].tag;
     point.offset_time = pkt.time_stamp + i * pkt.point_interval;
     std::lock_guard<std::mutex> lock(mutex_);
